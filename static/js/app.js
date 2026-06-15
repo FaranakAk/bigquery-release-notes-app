@@ -1,0 +1,503 @@
+// Application State
+const state = {
+    notes: [],          // Full list of parsed release notes from the backend
+    filteredNotes: [],  // Currently filtered release notes (search + categories)
+    selectedIds: new Set(), // Set of selected note IDs
+    activeCategory: 'all',
+    searchQuery: '',
+    theme: 'dark'
+};
+
+// DOM Elements
+const dom = {
+    themeToggle: document.getElementById('theme-toggle'),
+    refreshBtn: document.getElementById('refresh-button'),
+    refreshSpinner: document.getElementById('refresh-spinner'),
+    fetchStatus: document.getElementById('fetch-status'),
+    searchInput: document.getElementById('search-input'),
+    clearSearch: document.getElementById('clear-search'),
+    categoryFilters: document.getElementById('category-filters'),
+    notesGrid: document.getElementById('notes-grid'),
+    loadingView: document.getElementById('loading-view'),
+    emptyView: document.getElementById('empty-view'),
+    resetFilters: document.getElementById('reset-filters'),
+    
+    // Stats
+    statTotal: document.getElementById('stat-total'),
+    statFeatures: document.getElementById('stat-features'),
+    statChanges: document.getElementById('stat-changes'),
+    statDeprecations: document.getElementById('stat-deprecations'),
+    
+    // Selection Bar
+    selectionBar: document.getElementById('selection-bar'),
+    selectionText: document.getElementById('selection-text'),
+    clearSelectionBtn: document.getElementById('clear-selection-btn'),
+    tweetSelectionBtn: document.getElementById('tweet-selection-btn'),
+    
+    // Modal
+    composerModal: document.getElementById('composer-modal'),
+    closeModal: document.getElementById('close-modal'),
+    modalCancelBtn: document.getElementById('modal-cancel-btn'),
+    modalTweetBtn: document.getElementById('modal-tweet-btn'),
+    tweetTextarea: document.getElementById('tweet-textarea'),
+    charCountText: document.getElementById('char-count-text'),
+    charProgressBar: document.getElementById('char-progress-bar'),
+    helperTags: document.querySelectorAll('.helper-tag-btn')
+};
+
+// Initialize Application
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    setupEventListeners();
+    fetchReleaseNotes();
+});
+
+// Theme Management
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    state.theme = savedTheme;
+    if (savedTheme === 'light') {
+        document.body.classList.remove('dark-theme');
+        document.body.classList.add('light-theme');
+    } else {
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+    }
+}
+
+function toggleTheme() {
+    if (state.theme === 'dark') {
+        document.body.classList.remove('dark-theme');
+        document.body.classList.add('light-theme');
+        state.theme = 'light';
+    } else {
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+        state.theme = 'dark';
+    }
+    localStorage.setItem('theme', state.theme);
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Theme
+    dom.themeToggle.addEventListener('click', toggleTheme);
+    
+    // Refresh
+    dom.refreshBtn.addEventListener('click', () => fetchReleaseNotes(true));
+    
+    // Search
+    dom.searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value.trim().toLowerCase();
+        dom.clearSearch.style.display = state.searchQuery ? 'block' : 'none';
+        applyFilters();
+    });
+    
+    dom.clearSearch.addEventListener('click', () => {
+        dom.searchInput.value = '';
+        state.searchQuery = '';
+        dom.clearSearch.style.display = 'none';
+        applyFilters();
+        dom.searchInput.focus();
+    });
+    
+    // Category Buttons
+    dom.categoryFilters.addEventListener('click', (e) => {
+        const target = e.target.closest('.filter-tag');
+        if (!target) return;
+        
+        document.querySelectorAll('.filter-tag').forEach(tag => tag.classList.remove('active'));
+        target.classList.add('active');
+        
+        state.activeCategory = target.getAttribute('data-type');
+        applyFilters();
+    });
+    
+    // Reset Empty View
+    dom.resetFilters.addEventListener('click', () => {
+        dom.searchInput.value = '';
+        state.searchQuery = '';
+        dom.clearSearch.style.display = 'none';
+        
+        document.querySelectorAll('.filter-tag').forEach(tag => {
+            if (tag.getAttribute('data-type') === 'all') tag.classList.add('active');
+            else tag.classList.remove('active');
+        });
+        state.activeCategory = 'all';
+        applyFilters();
+    });
+    
+    // Card Selection Clear
+    dom.clearSelectionBtn.addEventListener('click', clearSelection);
+    
+    // Tweet Actions
+    dom.tweetSelectionBtn.addEventListener('click', () => openTweetComposer('selected'));
+    
+    // Modal Close
+    dom.closeModal.addEventListener('click', closeComposerModal);
+    dom.modalCancelBtn.addEventListener('click', closeComposerModal);
+    
+    // Modal Character Counting
+    dom.tweetTextarea.addEventListener('input', updateCharCount);
+    
+    // Modal Helpers
+    dom.helperTags.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tag = btn.getAttribute('data-tag');
+            insertTagAtCursor(tag);
+        });
+    });
+    
+    // Modal Post to Twitter/X
+    dom.modalTweetBtn.addEventListener('click', postTweet);
+}
+
+// Fetch Notes from API
+async function fetchReleaseNotes(forceRefresh = false) {
+    showLoading(true);
+    
+    // Set status indicator to loading
+    dom.fetchStatus.classList.add('loading');
+    dom.fetchStatus.querySelector('.status-text').textContent = 'Fetching updates...';
+    if (forceRefresh) {
+        dom.refreshBtn.classList.add('spinning');
+        dom.refreshBtn.disabled = true;
+    }
+    
+    try {
+        const url = forceRefresh ? '/api/notes?refresh=true' : '/api/notes';
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to retrieve release notes.');
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            state.notes = data.notes;
+            // Update fetch status text
+            const timeText = data.last_fetched ? `Refreshed: ${data.last_fetched.split(' ')[1]}` : 'Feed Updated';
+            dom.fetchStatus.querySelector('.status-text').textContent = timeText;
+            
+            // Clear selection since data reloaded
+            clearSelection();
+            applyFilters();
+        } else {
+            console.error('API Error:', data.error);
+            dom.fetchStatus.querySelector('.status-text').textContent = 'Error loading feed';
+        }
+    } catch (error) {
+        console.error('Fetch Error:', error);
+        dom.fetchStatus.querySelector('.status-text').textContent = 'Connection error';
+    } finally {
+        showLoading(false);
+        dom.fetchStatus.classList.remove('loading');
+        if (forceRefresh) {
+            dom.refreshBtn.classList.remove('spinning');
+            dom.refreshBtn.disabled = false;
+        }
+    }
+}
+
+// Filters & Search logic
+function applyFilters() {
+    state.filteredNotes = state.notes.filter(note => {
+        // Category Filter
+        const matchesCategory = state.activeCategory === 'all' || 
+            note.type.toLowerCase() === state.activeCategory.toLowerCase();
+            
+        // Search Filter
+        const textContent = (note.text + ' ' + note.type + ' ' + note.date).toLowerCase();
+        const matchesSearch = !state.searchQuery || textContent.includes(state.searchQuery);
+        
+        return matchesCategory && matchesSearch;
+    });
+    
+    updateStats();
+    renderNotes();
+}
+
+// Update counters
+function updateStats() {
+    // Total parsed notes
+    const total = state.notes.length;
+    const features = state.notes.filter(n => n.type.toLowerCase() === 'feature').length;
+    const deprecations = state.notes.filter(n => n.type.toLowerCase() === 'deprecation').length;
+    const changes = state.notes.filter(n => ['changed', 'resolved'].includes(n.type.toLowerCase())).length;
+    
+    dom.statTotal.textContent = total;
+    dom.statFeatures.textContent = features;
+    dom.statChanges.textContent = changes;
+    dom.statDeprecations.textContent = deprecations;
+}
+
+// Show/Hide loaders
+function showLoading(isLoading) {
+    if (isLoading) {
+        dom.loadingView.classList.remove('hidden');
+        dom.notesGrid.classList.add('hidden');
+        dom.emptyView.classList.add('hidden');
+    } else {
+        dom.loadingView.classList.add('hidden');
+        dom.notesGrid.classList.remove('hidden');
+    }
+}
+
+// Render release note cards
+function renderNotes() {
+    dom.notesGrid.innerHTML = '';
+    
+    if (state.filteredNotes.length === 0) {
+        dom.emptyView.classList.remove('hidden');
+        dom.notesGrid.classList.add('hidden');
+        return;
+    }
+    
+    dom.emptyView.classList.add('hidden');
+    dom.notesGrid.classList.remove('hidden');
+    
+    state.filteredNotes.forEach(note => {
+        const card = document.createElement('div');
+        const cleanType = note.type.toLowerCase();
+        
+        // Setup card classes
+        card.className = `release-card category-${cleanType}`;
+        card.setAttribute('data-id', note.id);
+        
+        if (state.selectedIds.has(note.id)) {
+            card.classList.add('selected');
+        }
+        
+        // Handle click card to select
+        card.addEventListener('click', (e) => {
+            // Prevent toggling selection if clicking a link or a button
+            if (e.target.closest('a') || e.target.closest('button')) {
+                return;
+            }
+            toggleSelection(note.id);
+        });
+        
+        // Define badge style
+        let badgeClass = 'badge-general';
+        if (['feature', 'changed', 'deprecation', 'resolved'].includes(cleanType)) {
+            badgeClass = `badge-${cleanType}`;
+        }
+        
+        card.innerHTML = `
+            <div class="card-header-row">
+                <div class="card-badge-date">
+                    <span class="badge ${badgeClass}">${note.type}</span>
+                    <span class="card-date">${note.date}</span>
+                </div>
+                <div class="card-selection-controls">
+                    <div class="checkbox-mock" aria-label="Select update">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                ${note.html}
+            </div>
+            
+            <div class="card-footer">
+                <a class="source-link-btn" href="${note.link}" target="_blank" rel="noopener noreferrer" title="View official Google Cloud Release Notes">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41 9.83-9.83V9h2V3h-6z"/>
+                    </svg>
+                    <span>Official Release Page</span>
+                </a>
+                
+                <div class="card-action-buttons">
+                    <button class="btn btn-tweet-quick" title="Tweet about this specific update">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        <span>Tweet</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Handle quick tweet button click
+        const quickTweetBtn = card.querySelector('.btn-tweet-quick');
+        quickTweetBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTweetComposer('single', note.id);
+        });
+        
+        dom.notesGrid.appendChild(card);
+    });
+}
+
+// Selection Bar logic
+function toggleSelection(id) {
+    if (state.selectedIds.has(id)) {
+        state.selectedIds.delete(id);
+    } else {
+        state.selectedIds.add(id);
+    }
+    
+    updateSelectionUI();
+}
+
+function clearSelection() {
+    state.selectedIds.clear();
+    updateSelectionUI();
+}
+
+function updateSelectionUI() {
+    // Toggle active classes on cards
+    document.querySelectorAll('.release-card').forEach(card => {
+        const cardId = card.getAttribute('data-id');
+        if (state.selectedIds.has(cardId)) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    });
+    
+    // Update bottom selection bar
+    const selectedCount = state.selectedIds.size;
+    if (selectedCount > 0) {
+        dom.selectionText.textContent = `${selectedCount} update${selectedCount > 1 ? 's' : ''} selected`;
+        dom.selectionBar.classList.add('active');
+        dom.selectionBar.classList.remove('hidden');
+    } else {
+        dom.selectionBar.classList.remove('active');
+        // Let slide animation finish before hiding element
+        setTimeout(() => {
+            if (state.selectedIds.size === 0) {
+                dom.selectionBar.classList.add('hidden');
+            }
+        }, 300);
+    }
+}
+
+// Compose Twitter/X Post Modal
+function openTweetComposer(mode, singleId = null) {
+    let text = '';
+    
+    if (mode === 'single') {
+        const note = state.notes.find(n => n.id === singleId);
+        if (note) {
+            text = formatTweet(note);
+        }
+    } else if (mode === 'selected') {
+        const selectedNotes = state.notes.filter(n => state.selectedIds.has(n.id));
+        if (selectedNotes.length === 1) {
+            text = formatTweet(selectedNotes[0]);
+        } else if (selectedNotes.length > 1) {
+            // Aggregate multiple updates
+            const date = selectedNotes[0].date;
+            text = `📢 BigQuery Release Updates [${date}]:\n`;
+            selectedNotes.forEach(note => {
+                const snippet = note.text.substring(0, 70).replace(/\n/g, ' ');
+                text += `• [${note.type}] ${snippet}...\n`;
+            });
+            text += `\nRead more: ${selectedNotes[0].link}\n#BigQuery #GoogleCloud`;
+        }
+    }
+    
+    dom.tweetTextarea.value = text;
+    updateCharCount();
+    
+    dom.composerModal.classList.remove('hidden');
+    // Let fade-in trigger
+    setTimeout(() => {
+        dom.composerModal.classList.add('active');
+    }, 10);
+}
+
+function formatTweet(note) {
+    // Truncate details to fit nicely in 280 characters with other templates
+    const header = `📢 BigQuery Release Notes [${note.date}]\nType: ${note.type}\n\n`;
+    const footer = `\n\nRead details: ${note.link}\n#BigQuery #GoogleCloud`;
+    
+    // Available length for description text
+    const fixedLength = header.length + footer.length;
+    const maxDescLength = 280 - fixedLength - 5; // buffer
+    
+    let desc = note.text;
+    if (desc.length > maxDescLength) {
+        desc = desc.substring(0, maxDescLength) + '...';
+    }
+    
+    return `${header}${desc}${footer}`;
+}
+
+function closeComposerModal() {
+    dom.composerModal.classList.remove('active');
+    setTimeout(() => {
+        dom.composerModal.classList.add('hidden');
+    }, 300);
+}
+
+// Character limit and progress ring calculations
+function updateCharCount() {
+    const text = dom.tweetTextarea.value;
+    const length = text.length;
+    const limit = 280;
+    const remaining = limit - length;
+    
+    dom.charCountText.textContent = remaining;
+    
+    // Progress calculation
+    const progress = Math.min(length / limit * 100, 100);
+    dom.charProgressBar.style.strokeDasharray = `${progress}, 100`;
+    
+    // Styling states based on character count limits
+    if (remaining < 0) {
+        dom.charCountText.classList.add('overlimit');
+        dom.charProgressBar.className.baseVal = 'char-progress danger';
+        dom.modalTweetBtn.disabled = true;
+        dom.modalTweetBtn.style.opacity = '0.5';
+    } else if (remaining <= 30) {
+        dom.charCountText.classList.remove('overlimit');
+        dom.charProgressBar.className.baseVal = 'char-progress warning';
+        dom.modalTweetBtn.disabled = false;
+        dom.modalTweetBtn.style.opacity = '1';
+    } else {
+        dom.charCountText.classList.remove('overlimit');
+        dom.charProgressBar.className.baseVal = 'char-progress';
+        dom.modalTweetBtn.disabled = false;
+        dom.modalTweetBtn.style.opacity = '1';
+    }
+}
+
+// Inserting tags at composer text area cursor location
+function insertTagAtCursor(tag) {
+    const textarea = dom.tweetTextarea;
+    const startPos = textarea.selectionStart;
+    const endPos = textarea.selectionEnd;
+    const oldText = textarea.value;
+    
+    // Add space before tag if not at start and no space exists
+    const prefix = (startPos > 0 && oldText[startPos - 1] !== ' ') ? ' ' : '';
+    // Add space after tag if text follows and no space exists
+    const suffix = (endPos < oldText.length && oldText[endPos] !== ' ') ? ' ' : '';
+    
+    textarea.value = oldText.substring(0, startPos) + prefix + tag + suffix + oldText.substring(endPos);
+    
+    // Reposition cursor
+    const newCursorPos = startPos + prefix.length + tag.length + suffix.length;
+    textarea.focus();
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    
+    updateCharCount();
+}
+
+// Opens Twitter/X Intent for Posting
+function postTweet() {
+    const tweetText = dom.tweetTextarea.value;
+    const encodedText = encodeURIComponent(tweetText);
+    
+    // We use the modern x.com share intent
+    const shareUrl = `https://x.com/intent/post?text=${encodedText}`;
+    
+    // Open in a new tab
+    window.open(shareUrl, '_blank', 'noopener,noreferrer,width=550,height=420');
+    
+    closeComposerModal();
+    clearSelection();
+}
