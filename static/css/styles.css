@@ -654,6 +654,76 @@ body.light-theme .theme-slider:before {
     display: block;
 }
 
+/* Card Content Body Wrapper (Show More / Less Clamping) */
+.card-body-wrapper {
+    position: relative;
+    max-height: 140px; /* compact height limit */
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-grow: 1;
+}
+
+.card-body-wrapper.expanded {
+    max-height: 1200px; /* expandable limit */
+}
+
+/* Fade out effect on card-body-wrapper */
+.card-body-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background: linear-gradient(to bottom, rgba(22, 30, 49, 0), var(--surface-bg));
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    opacity: 1;
+}
+
+body.light-theme .card-body-wrapper::after {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--surface-bg));
+}
+
+.card-body-wrapper.expanded::after {
+    opacity: 0;
+}
+
+/* Show More Toggle Button */
+.btn-show-more-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    margin-top: -0.5rem;
+    margin-bottom: 0.75rem;
+    align-self: flex-start;
+    transition: var(--transition-smooth);
+}
+
+.btn-show-more-toggle:hover {
+    color: var(--text-primary);
+}
+
+.btn-show-more-toggle svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    transition: transform 0.3s ease;
+}
+
+.btn-show-more-toggle.expanded svg {
+    transform: rotate(180deg);
+}
+
 /* Card Content Body */
 .card-body {
     flex-grow: 1;

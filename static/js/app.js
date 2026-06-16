@@ -290,6 +290,29 @@ function renderNotes() {
             badgeClass = `badge-${cleanType}`;
         }
         
+        const needsToggle = note.text.length > 300;
+        let bodyContent = `
+            <div class="card-body">
+                ${note.html}
+            </div>
+        `;
+        
+        if (needsToggle) {
+            bodyContent = `
+                <div class="card-body-wrapper">
+                    <div class="card-body">
+                        ${note.html}
+                    </div>
+                </div>
+                <button class="btn-show-more-toggle" aria-label="Toggle full update text">
+                    <span>Show More</span>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                    </svg>
+                </button>
+            `;
+        }
+        
         card.innerHTML = `
             <div class="card-header-row">
                 <div class="card-badge-date">
@@ -305,9 +328,7 @@ function renderNotes() {
                 </div>
             </div>
             
-            <div class="card-body">
-                ${note.html}
-            </div>
+            ${bodyContent}
             
             <div class="card-footer">
                 <a class="source-link-btn" href="${note.link}" target="_blank" rel="noopener noreferrer" title="View official Google Cloud Release Notes">
@@ -333,6 +354,18 @@ function renderNotes() {
                 </div>
             </div>
         `;
+        
+        // Handle show more toggle click
+        if (needsToggle) {
+            const toggleBtn = card.querySelector('.btn-show-more-toggle');
+            const wrapper = card.querySelector('.card-body-wrapper');
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isExpanded = wrapper.classList.toggle('expanded');
+                toggleBtn.classList.toggle('expanded', isExpanded);
+                toggleBtn.querySelector('span').textContent = isExpanded ? 'Show Less' : 'Show More';
+            });
+        }
         
         // Handle quick copy button click
         const quickCopyBtn = card.querySelector('.btn-copy-quick');
