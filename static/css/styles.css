@@ -271,6 +271,42 @@ body.light-theme .theme-toggle-btn .sun-icon {
     animation: spin 1s linear infinite;
 }
 
+/* Export CSV Button */
+.export-csv-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.6rem 1.25rem;
+    border-radius: 12px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-smooth);
+    backdrop-filter: var(--glass-blur);
+}
+
+.export-csv-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px var(--primary-glow);
+    background: var(--surface-hover);
+}
+
+.export-csv-btn:active {
+    transform: translateY(0);
+}
+
+.export-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
 /* Dashboard Toolbar (Filters & Search) */
 .dashboard-toolbar {
     display: grid;
@@ -704,6 +740,27 @@ body.light-theme .card-body strong, body.light-theme .card-body code {
     color: white;
     border-color: #1d9bf0;
     box-shadow: 0 4px 10px rgba(29, 155, 240, 0.3);
+}
+
+.btn-copy-quick {
+    background: rgba(26, 115, 232, 0.1);
+    border: 1px solid rgba(26, 115, 232, 0.2);
+    color: var(--primary);
+    padding: 0.4rem 0.8rem;
+}
+
+.btn-copy-quick:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 10px var(--primary-glow);
+}
+
+.btn-copy-quick.copied {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
 }
 
 .btn-tweet svg, .twitter-x-logo {

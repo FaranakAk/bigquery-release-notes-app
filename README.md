@@ -18,6 +18,8 @@ A beautiful, premium web application built with **Python Flask**, **Vanilla CSS*
     *   Integration with Twitter/X native Web Intents for secure, OAuth-free posting.
 *   **Bespoke Theme Control**: Modern dark and light themes with state persistence via `localStorage`.
 *   **Search & Filters**: Instant full-text search and category filter tags to locate updates quickly.
+*   **Copy to Clipboard**: Quick copy button on each update card that formats the update date, type, description, and link to your clipboard.
+*   **Export to CSV**: Download the currently active/filtered list of release updates as a standard CSV file directly from the dashboard.
 
 ---
 

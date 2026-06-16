@@ -13,6 +13,7 @@ const dom = {
     themeToggle: document.getElementById('theme-toggle'),
     refreshBtn: document.getElementById('refresh-button'),
     refreshSpinner: document.getElementById('refresh-spinner'),
+    exportCsvBtn: document.getElementById('export-csv-button'),
     fetchStatus: document.getElementById('fetch-status'),
     searchInput: document.getElementById('search-input'),
     clearSearch: document.getElementById('clear-search'),
@@ -85,6 +86,9 @@ function setupEventListeners() {
     
     // Refresh
     dom.refreshBtn.addEventListener('click', () => fetchReleaseNotes(true));
+    
+    // Export CSV
+    dom.exportCsvBtn.addEventListener('click', exportToCSV);
     
     // Search
     dom.searchInput.addEventListener('input', (e) => {
@@ -309,6 +313,12 @@ function renderNotes() {
                 </a>
                 
                 <div class="card-action-buttons">
+                    <button class="btn btn-copy-quick" title="Copy update details to clipboard">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                        </svg>
+                        <span>Copy</span>
+                    </button>
                     <button class="btn btn-tweet-quick" title="Tweet about this specific update">
                         <svg viewBox="0 0 24 24">
                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -318,6 +328,33 @@ function renderNotes() {
                 </div>
             </div>
         `;
+        
+        // Handle quick copy button click
+        const quickCopyBtn = card.querySelector('.btn-copy-quick');
+        quickCopyBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const copyText = `[${note.date}] ${note.type}: ${note.text} (Source: ${note.link})`;
+            try {
+                await navigator.clipboard.writeText(copyText);
+                
+                // Visual feedback
+                quickCopyBtn.classList.add('copied');
+                const btnText = quickCopyBtn.querySelector('span');
+                const originalText = btnText.textContent;
+                btnText.textContent = 'Copied!';
+                
+                const originalSvgHtml = quickCopyBtn.querySelector('svg').innerHTML;
+                quickCopyBtn.querySelector('svg').innerHTML = '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>';
+                
+                setTimeout(() => {
+                    quickCopyBtn.classList.remove('copied');
+                    btnText.textContent = originalText;
+                    quickCopyBtn.querySelector('svg').innerHTML = originalSvgHtml;
+                }, 2000);
+            } catch (err) {
+                console.error('Could not copy text: ', err);
+            }
+        });
         
         // Handle quick tweet button click
         const quickTweetBtn = card.querySelector('.btn-tweet-quick');
@@ -500,4 +537,50 @@ function postTweet() {
     
     closeComposerModal();
     clearSelection();
+}
+
+// Export to CSV Functionality
+function exportToCSV() {
+    if (state.filteredNotes.length === 0) {
+        alert('No release notes available to export.');
+        return;
+    }
+    
+    const headers = ['Date', 'Type', 'Description', 'Link'];
+    const csvRows = [headers.join(',')];
+    
+    state.filteredNotes.forEach(note => {
+        const row = [
+            escapeCSVField(note.date),
+            escapeCSVField(note.type),
+            escapeCSVField(note.text),
+            escapeCSVField(note.link)
+        ];
+        csvRows.push(row.join(','));
+    });
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const categorySuffix = state.activeCategory !== 'all' ? `_${state.activeCategory}` : '';
+    link.setAttribute('download', `bigquery_release_notes_${dateStr}${categorySuffix}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function escapeCSVField(val) {
+    if (val === null || val === undefined) return '""';
+    let str = String(val);
+    str = str.replace(/"/g, '""');
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        str = `"${str}"`;
+    }
+    return str;
 }
