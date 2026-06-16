@@ -1412,3 +1412,16 @@ body.light-theme .toast-notification {
     font-weight: bold;
     font-size: 1.1rem;
 }
+
+/* Search Term Highlighting */
+mark.search-highlight {
+    background-color: rgba(234, 179, 8, 0.25);
+    color: inherit;
+    border-radius: 4px;
+    padding: 0 2px;
+    font-weight: inherit;
+}
+
+body.light-theme mark.search-highlight {
+    background-color: rgba(234, 179, 8, 0.4);
+}

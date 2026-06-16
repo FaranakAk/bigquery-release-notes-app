@@ -308,10 +308,11 @@ function renderNotes() {
             badgeClass = `badge-${cleanType}`;
         }
         
+        const highlightedHtml = highlightSearchTerm(note.html, state.searchQuery);
         const needsToggle = note.text.length > 300;
         let bodyContent = `
             <div class="card-body">
-                ${note.html}
+                ${highlightedHtml}
             </div>
         `;
         
@@ -319,7 +320,7 @@ function renderNotes() {
             bodyContent = `
                 <div class="card-body-wrapper">
                     <div class="card-body">
-                        ${note.html}
+                        ${highlightedHtml}
                     </div>
                 </div>
                 <button class="btn-show-more-toggle" aria-label="Toggle full update text">
@@ -676,4 +677,27 @@ function showToast(message, type = 'success') {
             }
         }, 400);
     }, 3000);
+}
+
+// Helper to safely highlight matching search terms in HTML without breaking tag markup
+function highlightSearchTerm(htmlContent, query) {
+    if (!query) return htmlContent;
+    
+    // Escape special regex characters in search query
+    const escapedQuery = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    
+    // Split content by HTML tags to avoid modifying attributes/tag names
+    const parts = htmlContent.split(/(<[^>]+>)/g);
+    
+    const highlightedParts = parts.map((part) => {
+        // HTML tags are at odd indices (they start with < and end with >)
+        if (part.startsWith('<') && part.endsWith('>')) {
+            return part; // Return HTML tag unmodified
+        }
+        // Replace matches in plain text nodes
+        return part.replace(regex, '<mark class="search-highlight">$1</mark>');
+    });
+    
+    return highlightedParts.join('');
 }
