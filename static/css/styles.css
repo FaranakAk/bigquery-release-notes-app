@@ -538,6 +538,33 @@ body.light-theme .theme-slider:before {
     }
 }
 
+/* Date Header Grouping inside grid */
+.date-header {
+    grid-column: 1 / -1; /* spans full width of CSS grid */
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 1.5rem;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Make first date header start cleanly at the top */
+.date-header:first-of-type {
+    margin-top: 0;
+}
+
+.date-header-icon {
+    width: 18px;
+    height: 18px;
+    fill: var(--primary);
+    filter: drop-shadow(0 0 3px var(--primary-glow));
+}
+
 .release-card {
     background: var(--surface-bg);
     border: 1px solid var(--border-color);
