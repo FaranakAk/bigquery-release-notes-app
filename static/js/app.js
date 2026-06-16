@@ -11,6 +11,8 @@ const state = {
 // DOM Elements
 const dom = {
     themeToggle: document.getElementById('theme-toggle'),
+    themeSunIcon: document.getElementById('theme-sun-icon'),
+    themeMoonIcon: document.getElementById('theme-moon-icon'),
     refreshBtn: document.getElementById('refresh-button'),
     refreshSpinner: document.getElementById('refresh-spinner'),
     exportCsvBtn: document.getElementById('export-csv-button'),
@@ -57,32 +59,35 @@ document.addEventListener('DOMContentLoaded', () => {
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     state.theme = savedTheme;
-    if (savedTheme === 'light') {
-        document.body.classList.remove('dark-theme');
-        document.body.classList.add('light-theme');
-    } else {
-        document.body.classList.remove('light-theme');
-        document.body.classList.add('dark-theme');
-    }
+    updateThemeUI();
 }
 
 function toggleTheme() {
-    if (state.theme === 'dark') {
+    state.theme = dom.themeToggle.checked ? 'light' : 'dark';
+    localStorage.setItem('theme', state.theme);
+    updateThemeUI();
+}
+
+function updateThemeUI() {
+    if (state.theme === 'light') {
         document.body.classList.remove('dark-theme');
         document.body.classList.add('light-theme');
-        state.theme = 'light';
+        dom.themeToggle.checked = true;
+        dom.themeSunIcon.classList.add('active');
+        dom.themeMoonIcon.classList.remove('active');
     } else {
         document.body.classList.remove('light-theme');
         document.body.classList.add('dark-theme');
-        state.theme = 'dark';
+        dom.themeToggle.checked = false;
+        dom.themeSunIcon.classList.remove('active');
+        dom.themeMoonIcon.classList.add('active');
     }
-    localStorage.setItem('theme', state.theme);
 }
 
 // Event Listeners
 function setupEventListeners() {
     // Theme
-    dom.themeToggle.addEventListener('click', toggleTheme);
+    dom.themeToggle.addEventListener('change', toggleTheme);
     
     // Refresh
     dom.refreshBtn.addEventListener('click', () => fetchReleaseNotes(true));
