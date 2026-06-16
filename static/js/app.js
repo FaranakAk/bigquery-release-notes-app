@@ -392,6 +392,7 @@ function renderNotes() {
             const copyText = `[${note.date}] ${note.type}: ${note.text} (Source: ${note.link})`;
             try {
                 await navigator.clipboard.writeText(copyText);
+                showToast('Copied update details to clipboard!');
                 
                 // Visual feedback
                 quickCopyBtn.classList.add('copied');
@@ -629,6 +630,8 @@ function exportToCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    showToast(`Exported ${state.filteredNotes.length} updates to CSV!`);
 }
 
 function escapeCSVField(val) {
@@ -639,4 +642,38 @@ function escapeCSVField(val) {
         str = `"${str}"`;
     }
     return str;
+}
+
+// Toast Notification System Helper
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    
+    const icon = type === 'success' ? '✓' : 'ℹ';
+    const iconClass = type === 'success' ? 'toast-success-icon' : 'toast-info-icon';
+    
+    toast.innerHTML = `
+        <span class="${iconClass}">${icon}</span>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Trigger transition
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Remove after 3.5 seconds (including slide down transition)
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                container.removeChild(toast);
+            }
+        }, 400);
+    }, 3000);
 }
