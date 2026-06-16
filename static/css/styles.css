@@ -895,6 +895,62 @@ body.light-theme .card-body strong, body.light-theme .card-body code {
     fill: currentColor;
 }
 
+/* Fallback Warning Banner */
+.fallback-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+    padding: 1rem 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    backdrop-filter: var(--glass-blur);
+    animation: bannerFadeIn 0.4s ease;
+}
+
+.fallback-banner.hidden {
+    display: none !important;
+}
+
+.fallback-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.banner-icon {
+    font-size: 1.25rem;
+}
+
+.banner-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.close-banner-btn {
+    background: none;
+    border: none;
+    color: var(--warning);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.7;
+    transition: var(--transition-smooth);
+}
+
+.close-banner-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+@keyframes bannerFadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Loading, Error and Empty States CSS */
 .loading-state {
     display: flex;

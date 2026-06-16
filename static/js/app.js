@@ -45,7 +45,12 @@ const dom = {
     tweetTextarea: document.getElementById('tweet-textarea'),
     charCountText: document.getElementById('char-count-text'),
     charProgressBar: document.getElementById('char-progress-bar'),
-    helperTags: document.querySelectorAll('.helper-tag-btn')
+    helperTags: document.querySelectorAll('.helper-tag-btn'),
+    
+    // Fallback Banner
+    fallbackBanner: document.getElementById('fallback-banner'),
+    fallbackBannerText: document.getElementById('fallback-banner-text'),
+    closeFallbackBanner: document.getElementById('close-fallback-banner')
 };
 
 // Initialize Application
@@ -159,6 +164,11 @@ function setupEventListeners() {
     
     // Modal Post to Twitter/X
     dom.modalTweetBtn.addEventListener('click', postTweet);
+    
+    // Close Fallback Banner
+    dom.closeFallbackBanner.addEventListener('click', () => {
+        dom.fallbackBanner.classList.add('hidden');
+    });
 }
 
 // Fetch Notes from API
@@ -185,6 +195,14 @@ async function fetchReleaseNotes(forceRefresh = false) {
             // Update fetch status text
             const timeText = data.last_fetched ? `Refreshed: ${data.last_fetched.split(' ')[1]}` : 'Feed Updated';
             dom.fetchStatus.querySelector('.status-text').textContent = timeText;
+            
+            // Show fallback banner if using cache fallback
+            if (data.fallback) {
+                dom.fallbackBannerText.textContent = `Viewing cached updates from ${data.last_fetched}. The official Google Cloud feed is currently unreachable.`;
+                dom.fallbackBanner.classList.remove('hidden');
+            } else {
+                dom.fallbackBanner.classList.add('hidden');
+            }
             
             // Clear selection since data reloaded
             clearSelection();

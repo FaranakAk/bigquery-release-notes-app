@@ -122,6 +122,15 @@
         
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Fallback Banner -->
+            <div class="fallback-banner hidden" id="fallback-banner">
+                <div class="fallback-banner-content">
+                    <span class="banner-icon">⚠️</span>
+                    <span class="banner-text" id="fallback-banner-text">Viewing cached updates. The live feed is currently unreachable.</span>
+                </div>
+                <button class="close-banner-btn" id="close-fallback-banner" aria-label="Close warning banner">×</button>
+            </div>
+
             <!-- Loading State -->
             <div class="loading-state" id="loading-view">
                 <div class="pulse-loader">
